@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+source <(curl -s https://raw.githubusercontent.com/vhsdream/ProxmoxVE-dev/cwa-dev/misc/cwa_patcher.func)
 # Copyright (c) 2021-2025 community-scripts ORG
 # Author: vhsdream
 # License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
@@ -20,7 +20,6 @@ $STD apt-get install -y \
   mc \
   build-essential \
   imagemagick \
-  git \
   libldap2-dev \
   libsasl2-dev \
   ghostscript \
@@ -76,16 +75,21 @@ systemctl start cps && sleep 5 && systemctl stop cps
 msg_ok "Calibre-Web Service successfully cycled"
 
 msg_info "Setup ${APPLICATION}"
+tmp_file=$(mktemp)
 RELEASE=$(curl -s https://api.github.com/repos/crocodilestick/Calibre-Web-Automated/releases/latest | grep "tag_name" | awk '{print substr($2, 3, length($2)-4) }')
-$STD git clone https://github.com/crocodilestick/Calibre-Web-Automated.git /opt/cwa --single-branch
+wget -q "https://github.com/crocodilestick/Calibre-Web-Automated/archive/refs/tags/V${RELEASE}.zip" -O $tmp_file
+unzip -q $tmp_file
+mv ${APPLICATION}-${RELEASE}/ /opt/cwa
 cd /opt/cwa
-$STD git checkout V${RELEASE}
 $STD pip install -r requirements.txt
-wget -q https://gist.githubusercontent.com/vhsdream/2e81afeff139c5746db1ede88c01cc7b/raw/51238206e87aec6c0abeccce85dec9f2b0c89000/proxmox-lxc.patch -O /opt/cwa.patch # not for production
-$STD git apply --whitespace=fix /opt/cwa.patch # not for production
 cd scripts
+
+# patcher functions
+cwa_vars
+replacer
+
 chmod +x check-cwa-services.sh ingest-service.sh change-detector.sh
-echo "${RELEASE}" >/opt/${APPLICATION}_version.txt
+echo "${RELEASE}" >/opt/{$APPLICATION}_version.txt
 msg_ok "Setup ${APPLICATION}"
 
 msg_info "Creating necessary files & directories"
