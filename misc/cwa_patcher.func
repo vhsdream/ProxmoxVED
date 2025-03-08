@@ -84,7 +84,7 @@ EOF
 
     inotifywait -m -r --format="%e %w%f" -e close_write -e moved_to "$\WATCH_FOLDER" |
     while read -r events filepath ; do
-            echo "[cwa-ingest-service] New files detected - $filepath - Starting Ingest Processor..."
+            echo "[cwa-ingest-service] New files detected - \$filepath - Starting Ingest Processor..."
             python3 /opt/cwa/scripts/ingest_processor.py "\$filepath"
     done
 EOF
