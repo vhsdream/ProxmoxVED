@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-source <(curl -s https://raw.githubusercontent.com/vhsdream/ProxmoxVE-dev/cwa-dev/misc/cwa_patcher.func)
 # Copyright (c) 2021-2025 community-scripts ORG
 # Author: vhsdream
 # License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
@@ -85,6 +84,7 @@ $STD pip install -r requirements.txt
 cd scripts
 
 # patcher functions
+source <(curl -s https://raw.githubusercontent.com/vhsdream/ProxmoxVE-dev/cwa-dev/misc/cwa_patcher.func)
 cwa_vars
 replacer
 script_generator
