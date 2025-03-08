@@ -81,17 +81,6 @@ unzip -q $tmp_file
 mv ${APPLICATION}-${RELEASE}/ /opt/cwa
 cd /opt/cwa
 $STD pip install -r requirements.txt
-cd scripts
-
-# patcher functions
-source <(curl -s https://raw.githubusercontent.com/vhsdream/ProxmoxVE-dev/cwa-dev/misc/cwa_patcher.func)
-cwa_vars
-replacer
-script_generator
-
-chmod +x check-cwa-services.sh ingest-service.sh change-detector.sh
-echo "${RELEASE}" >/opt/{$APPLICATION}_version.txt
-msg_ok "Setup ${APPLICATION}"
 
 msg_info "Creating necessary files & directories"
 mkdir -p /opt/cwa-book-ingest
@@ -100,9 +89,19 @@ mkdir -p /var/lib/cwa/processed_books/{converted,imported,failed,fixed_originals
 touch /var/lib/cwa/convert-library.log
 msg_ok "Directories & files created"
 
-msg_info "Copying patched Calibre-Web files into local Python lib folder"
+# patcher functions
+msg_info "Patching Calibre-Web Automated"
+source <(curl -s https://raw.githubusercontent.com/vhsdream/ProxmoxVE-dev/cwa-dev/misc/cwa_patcher.func)
+cwa_vars
+replacer
+script_generator
 cp -r /opt/cwa/root/app/calibre-web/cps/* /usr/local/lib/python3*/dist-packages/calibreweb/cps
-msg_ok "Files copied"
+msg_ok "Calibre-Web Automated patched successfully"
+
+cd scripts
+chmod +x check-cwa-services.sh ingest-service.sh change-detector.sh
+echo "${RELEASE}" >/opt/{$APPLICATION}_version.txt
+msg_ok "Setup ${APPLICATION}"
 
 msg_info "Creating Services and Timers"
 cat <<EOF >/etc/systemd/system/cwa-autolibrary.service
