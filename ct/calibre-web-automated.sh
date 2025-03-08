@@ -58,6 +58,7 @@ function update_script() {
         # Patcher functions
         cwa_vars
         replacer
+        script_generator
 
         cp -r /opt/cwa/root/app/calibre-web/cps/* /usr/local/lib/python3*/dist-packages/calibreweb/cps
         cd scripts

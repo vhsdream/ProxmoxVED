@@ -87,6 +87,7 @@ cd scripts
 # patcher functions
 cwa_vars
 replacer
+script_generator
 
 chmod +x check-cwa-services.sh ingest-service.sh change-detector.sh
 echo "${RELEASE}" >/opt/{$APPLICATION}_version.txt
