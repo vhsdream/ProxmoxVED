@@ -57,7 +57,7 @@ replacer() {
 
 # This is the script generator. Handles creating a few CWA scripts without cluttering up the install and ct scripts
 script_generator() {
-    cat <<EOF >$SCRIPTS/change-detector.sh
+    bash -c "cat > /opt/cwa/scripts/change-detector.sh" <<-EOF
     #!/usr/bin/env bash
 
     echo "========== STARTING METADATA CHANGE DETECTOR ==========="
@@ -74,7 +74,7 @@ script_generator() {
     done
 EOF
 
-    cat <<EOF >$SCRIPTS/ingest-service.sh
+    bash -c "cat > $SCRIPTS/ingest-service.sh" <<-EOF
     #!/usr/bin/env bash
 
     echo "========== STARTING CWA-INGEST SERVICE =========="
@@ -89,7 +89,7 @@ EOF
     done
 EOF
 
-    cat <<EOF >$SCRIPTS/check-cwa-services.sh
+    bash -c "cat > $SCRIPTS/check-cwa-services.sh" <<-EOF
     #!/usr/bin/env bash
 
     RED='\033[0;31m'
