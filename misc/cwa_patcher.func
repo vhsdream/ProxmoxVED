@@ -64,10 +64,10 @@ script_generator() {
 
     # Folder to monitor
     WATCH_FOLDER="/var/lib/cwa/metadata_change_logs"
-    echo "[metadata-change-detector] Watching folder: $WATCH_FOLDER"
+    echo "[metadata-change-detector] Watching folder: \$WATCH_FOLDER"
 
     # Monitor the folder for new files
-    inotifywait -m -e close_write -e moved_to --exclude '^.*\.(swp)$' "$WATCH_FOLDER" |
+    inotifywait -m -e close_write -e moved_to --exclude '^.*\.(swp)$' "\$WATCH_FOLDER" |
     while read -r directory events filename; do
             echo "[metadata-change-detector] New file detected: $filename"
             python3 /opt/cwa/scripts/cover_enforcer.py "--log" "$filename"
@@ -80,9 +80,9 @@ EOF
     echo "========== STARTING CWA-INGEST SERVICE =========="
 
     WATCH_FOLDER=$(grep -o '"ingest_folder": "[^"]*' /opt/cwa/dirs.json | grep -o '[^"]*$')
-    echo "[cwa-ingest-service] Watching folder: $WATCH_FOLDER"
+    echo "[cwa-ingest-service] Watching folder: $\WATCH_FOLDER"
 
-    inotifywait -m -r --format="%e %w%f" -e close_write -e moved_to "$WATCH_FOLDER" |
+    inotifywait -m -r --format="%e %w%f" -e close_write -e moved_to "$\WATCH_FOLDER" |
     while read -r events filepath ; do
             echo "[cwa-ingest-service] New files detected - $filepath - Starting Ingest Processor..."
             python3 /opt/cwa/scripts/ingest_processor.py "$filepath"
@@ -102,7 +102,7 @@ EOF
     INGESTER_STATUS=$(systemctl is-active cwa-ingester)
     METACHANGE_STATUS=$(systemctl is-active cwa-change-detector)
 
-    if [ "$INGESTER_STATUS" = "active" ] ; then
+    if [ "\$INGESTER_STATUS" = "active" ] ; then
         echo -e "- cwa-ingest-service ${GREEN}is running${NC}"
         is=true
     else
@@ -110,7 +110,7 @@ EOF
         is=false
     fi
 
-    if [ "$METACHANGE_STATUS" = "active" ]; then
+    if [ "\$METACHANGE_STATUS" = "active" ]; then
         echo -e "- metadata-change-detector ${GREEN}is running${NC}"
         mc=true
     else
