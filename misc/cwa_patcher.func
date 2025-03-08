@@ -31,19 +31,19 @@ replacer() {
     FILES=$(find ./scripts ./root/app/calibre-web/cps -type f -name "*.py")
 
     for file in $FILES; do
-        if grep "$OLD_META_TEMP" "$file"; then
+        if grep -q "$OLD_META_TEMP" "$file"; then
             sed -i "s|$OLD_META_TEMP|$META_TEMP|g" "$file"
         fi
-        if grep "$OLD_META_LOGS" "$file"; then
+        if grep -q "$OLD_META_LOGS" "$file"; then
             sed -i "s|$OLD_META_LOGS|$META_LOGS|g" "$file"
         fi
-        if grep "$OLD_DB" "$file"; then
+        if grep -q "$OLD_DB" "$file"; then
             sed -i "s|$OLD_DB|$DB|g" "$file"
         fi
-        if grep "$OLD_BASE" "$file"; then
+        if grep -q "$OLD_BASE" "$file"; then
             sed -i "s|$OLD_BASE|$BASE|g" "$file"
         fi
-        if grep "$OLD_CONFIG" "$file"; then
+        if grep -q "$OLD_CONFIG" "$file"; then
             sed -i "s|$OLD_CONFIG|"$CONFIG"|g" "$file"
         fi
     done
@@ -99,8 +99,8 @@ EOF
     echo "====== Calibre-Web Automated -- Status of Monitoring Services ======"
     echo ""
 
-    INGESTER_STATUS=$(systemctl is-active cwa-ingester)
-    METACHANGE_STATUS=$(systemctl is-active cwa-change-detector)
+    INGESTER_STATUS=\$(systemctl is-active cwa-ingester)
+    METACHANGE_STATUS=\$(systemctl is-active cwa-change-detector)
 
     if [ "\$INGESTER_STATUS" = "active" ] ; then
         echo -e "- cwa-ingest-service \${GREEN}is running\${NC}"
