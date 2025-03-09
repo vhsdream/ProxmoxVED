@@ -68,80 +68,80 @@ replacer() {
 # This is the script generator. Handles creating a few CWA scripts without cluttering up the install and ct scripts
 script_generator() {
     bash -c "cat > /opt/cwa/scripts/change-detector.sh" <<-EOF
-    #!/usr/bin/env bash
+#!/usr/bin/env bash
 
-    echo "========== STARTING METADATA CHANGE DETECTOR ==========="
+echo "========== STARTING METADATA CHANGE DETECTOR ==========="
 
-    # Folder to monitor
-    WATCH_FOLDER="/var/lib/cwa/metadata_change_logs"
-    echo "[metadata-change-detector] Watching folder: \$WATCH_FOLDER"
+# Folder to monitor
+WATCH_FOLDER="/var/lib/cwa/metadata_change_logs"
+echo "[metadata-change-detector] Watching folder: \$WATCH_FOLDER"
 
-    # Monitor the folder for new files
-    inotifywait -m -e close_write -e moved_to --exclude '^.*\.(swp)$' "\$WATCH_FOLDER" |
-    while read -r directory events filename; do
-            echo "[metadata-change-detector] New file detected: \$filename"
-            python3 /opt/cwa/scripts/cover_enforcer.py "--log" "\$filename"
-    done
+# Monitor the folder for new files
+inotifywait -m -e close_write -e moved_to --exclude '^.*\.(swp)$' "\$WATCH_FOLDER" |
+while read -r directory events filename; do
+        echo "[metadata-change-detector] New file detected: \$filename"
+        python3 /opt/cwa/scripts/cover_enforcer.py "--log" "\$filename"
+done
 EOF
 
     bash -c "cat > $SCRIPTS/ingest-service.sh" <<-EOF
-    #!/usr/bin/env bash
+#!/usr/bin/env bash
 
-    echo "========== STARTING CWA-INGEST SERVICE =========="
+echo "========== STARTING CWA-INGEST SERVICE =========="
 
-    WATCH_FOLDER=$(grep -o '"ingest_folder": "[^"]*' /opt/cwa/dirs.json | grep -o '[^"]*$')
-    echo "[cwa-ingest-service] Watching folder: \$WATCH_FOLDER"
+WATCH_FOLDER=$(grep -o '"ingest_folder": "[^"]*' /opt/cwa/dirs.json | grep -o '[^"]*$')
+echo "[cwa-ingest-service] Watching folder: \$WATCH_FOLDER"
 
-    inotifywait -m -r --format="%e %w%f" -e close_write -e moved_to "\$WATCH_FOLDER" |
-    while read -r events filepath ; do
-            echo "[cwa-ingest-service] New files detected - \$filepath - Starting Ingest Processor..."
-            python3 /opt/cwa/scripts/ingest_processor.py "\$filepath"
-    done
+inotifywait -m -r --format="%e %w%f" -e close_write -e moved_to "\$WATCH_FOLDER" |
+while read -r events filepath ; do
+        echo "[cwa-ingest-service] New files detected - \$filepath - Starting Ingest Processor..."
+        python3 /opt/cwa/scripts/ingest_processor.py "\$filepath"
+done
 EOF
 
     bash -c "cat > $SCRIPTS/check-cwa-services.sh" <<-EOF
-    #!/usr/bin/env bash
+#!/usr/bin/env bash
 
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    NC='\033[0m' # No Color
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
 
-    echo "====== Calibre-Web Automated -- Status of Monitoring Services ======"
-    echo ""
+echo "====== Calibre-Web Automated -- Status of Monitoring Services ======"
+echo ""
 
-    INGESTER_STATUS=\$(systemctl is-active cwa-ingester)
-    METACHANGE_STATUS=\$(systemctl is-active cwa-change-detector)
+INGESTER_STATUS=\$(systemctl is-active cwa-ingester)
+METACHANGE_STATUS=\$(systemctl is-active cwa-change-detector)
 
-    if [ "\$INGESTER_STATUS" = "active" ] ; then
-        echo -e "- cwa-ingest-service \${GREEN}is running\${NC}"
-        is=true
+if [ "\$INGESTER_STATUS" = "active" ] ; then
+    echo -e "- cwa-ingest-service \${GREEN}is running\${NC}"
+    is=true
+else
+    echo -e "- cwa-ingest-service \${RED}is not running\${NC}"
+    is=false
+fi
+
+if [ "\$METACHANGE_STATUS" = "active" ]; then
+    echo -e "- metadata-change-detector \${GREEN}is running\${NC}"
+    mc=true
+else
+    echo -e "- metadata-change-detector \${RED}is not running\${NC}"
+    mc=false
+fi
+
+echo ""
+
+if \$is && \$mc; then
+    echo -e "Calibre-Web-Automated was \${GREEN}successfully installed \${NC}and \${GREEN}is running properly!\${NC}"
+    exit 0
+else
+    echo -e "Calibre-Web-Automated was \${RED}not installed successfully\${NC}, please check the logs for more information."
+    if [ "\$is" = true ] && [ "\$mc" = false ] ; then
+        exit 1
+    elif [ "\$is" = false ] && [ "\$mc" = true ] ; then
+        exit 2
     else
-        echo -e "- cwa-ingest-service \${RED}is not running\${NC}"
-        is=false
+        exit 3
     fi
-
-    if [ "\$METACHANGE_STATUS" = "active" ]; then
-        echo -e "- metadata-change-detector \${GREEN}is running\${NC}"
-        mc=true
-    else
-        echo -e "- metadata-change-detector \${RED}is not running\${NC}"
-        mc=false
-    fi
-
-    echo ""
-
-    if \$is && \$mc; then
-        echo -e "Calibre-Web-Automated was \${GREEN}successfully installed \${NC}and \${GREEN}is running properly!\${NC}"
-        exit 0
-    else
-        echo -e "Calibre-Web-Automated was \${RED}not installed successfully\${NC}, please check the logs for more information."
-        if [ "\$is" = true ] && [ "\$mc" = false ] ; then
-            exit 1
-        elif [ "\$is" = false ] && [ "\$mc" = true ] ; then
-            exit 2
-        else
-            exit 3
-        fi
-    fi
+fi
 EOF
 }
