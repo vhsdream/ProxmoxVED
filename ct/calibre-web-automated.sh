@@ -31,7 +31,7 @@ function update_script() {
     fi
 
     RELEASE=$(curl -s https://api.github.com/repos/crocodilestick/Calibre-Web-Automated/releases/latest | grep "tag_name" | awk '{print substr($2, 3, length($2)-4) }')
-    if [[ "${RELEASE}" != "$(cat /opt/${APP}_version.txt)" ]] || [[ ! -f /opt/${APP}_version.txt ]]; then
+    if [[ "V${RELEASE}" != "$(cat /opt/${APP}_version.txt)" ]] || [[ ! -f /opt/${APP}_version.txt ]]; then
         msg_info "Stopping $APP"
         systemctl stop cps cwa-autolibrary cwa-ingester cwa-change-detector cwa-autozip.timer
         msg_ok "Stopped $APP"
@@ -48,6 +48,7 @@ function update_script() {
         ./kepubify-linux-64bit --version | awk '{print substr($2, 2)}' > /opt/kepubify/version.txt
         cd /opt/calibre-web
         $STD pip install --upgrade calibreweb[goodreads,metadata,kobo]
+        pip show calibreweb | grep Version | cut -d' ' -f2 > /opt/calibre-web/calibreweb_version.txt
         tmp_file=$(mktemp)
         rm -rf /opt/cwa
         wget -q "https://github.com/crocodilestick/Calibre-Web-Automated/archive/refs/tags/V${RELEASE}.zip" -O $tmp_file

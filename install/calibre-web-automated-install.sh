@@ -49,7 +49,7 @@ $STD apt-get install -y calibre
 $STD wget https://github.com/janeczku/calibre-web/raw/master/library/metadata.db -P /opt/calibre-web
 $STD pip install calibreweb[goodreads,metadata,kobo]
 $STD pip install jsonschema
-echo $(pip show calibreweb | grep Version | cut -d' ' -f2) > /opt/calibre-web/calibreweb_version.txt
+pip show calibreweb | grep Version | cut -d' ' -f2 > /opt/calibre-web/calibreweb_version.txt
 msg_ok "Installed Calibre-Web"
 
 msg_info "Creating Calibre-Web Service"
@@ -102,7 +102,7 @@ msg_ok "Calibre-Web Automated patched successfully"
 
 cd scripts
 chmod +x check-cwa-services.sh ingest-service.sh change-detector.sh
-echo "${RELEASE}" >/opt/${APPLICATION}_version.txt
+echo "V${RELEASE}" >/opt/${APPLICATION}_version.txt
 msg_ok "Setup ${APPLICATION}"
 
 msg_info "Creating Services and Timers"
