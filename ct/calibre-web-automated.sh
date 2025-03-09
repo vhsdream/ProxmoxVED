@@ -45,6 +45,7 @@ function update_script() {
         rm -rf kepubify-linux-64bit
         curl -fsSLO https://github.com/pgaskin/kepubify/releases/latest/download/kepubify-linux-64bit
         chmod +x kepubify-linux-64bit
+        ./kepubify-linux-64bit --version | awk '{print substr($2, 2)}' > /opt/kepubify/version.txt
         cd /opt/calibre-web
         $STD pip install --upgrade calibreweb[goodreads,metadata,kobo]
         tmp_file=$(mktemp)

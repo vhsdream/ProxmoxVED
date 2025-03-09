@@ -39,6 +39,7 @@ mkdir -p /opt/kepubify
 cd /opt/kepubify
 curl -fsSLO https://github.com/pgaskin/kepubify/releases/latest/download/kepubify-linux-64bit &>/dev/null
 chmod +x kepubify-linux-64bit
+./kepubify-linux-64bit --version | awk '{print substr($2 ,2)}' > /opt/kepubify/version.txt
 msg_ok "Installed Kepubify"
 
 msg_info "Installing Calibre-Web (Patience)"
@@ -48,6 +49,7 @@ $STD apt-get install -y calibre
 $STD wget https://github.com/janeczku/calibre-web/raw/master/library/metadata.db -P /opt/calibre-web
 $STD pip install calibreweb[goodreads,metadata,kobo]
 $STD pip install jsonschema
+echo $(pip show calibreweb | grep Version | cut -d' ' -f2) > /opt/calibre-web/calibreweb_version.txt
 msg_ok "Installed Calibre-Web"
 
 msg_info "Creating Calibre-Web Service"
