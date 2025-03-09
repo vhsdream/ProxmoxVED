@@ -80,9 +80,9 @@ EOF
     echo "========== STARTING CWA-INGEST SERVICE =========="
 
     WATCH_FOLDER=$(grep -o '"ingest_folder": "[^"]*' /opt/cwa/dirs.json | grep -o '[^"]*$')
-    echo "[cwa-ingest-service] Watching folder: $\WATCH_FOLDER"
+    echo "[cwa-ingest-service] Watching folder: \$WATCH_FOLDER"
 
-    inotifywait -m -r --format="%e %w%f" -e close_write -e moved_to "$\WATCH_FOLDER" |
+    inotifywait -m -r --format="%e %w%f" -e close_write -e moved_to "\$WATCH_FOLDER" |
     while read -r events filepath ; do
             echo "[cwa-ingest-service] New files detected - \$filepath - Starting Ingest Processor..."
             python3 /opt/cwa/scripts/ingest_processor.py "\$filepath"
