@@ -18,7 +18,7 @@ $STD apt-get install -y \
   curl \
   sudo \
   mc \
-  unzip \
+  unzip
 msg_ok "Installed Dependencies"
 
 msg_info "Setup ${APPLICATION}"
