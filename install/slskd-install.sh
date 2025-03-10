@@ -22,11 +22,10 @@ $STD apt-get install -y \
 msg_ok "Installed Dependencies"
 
 msg_info "Setup ${APPLICATION}"
-tmp_file=$(mktemp)
 RELEASE=$(curl -s https://api.github.com/repos/slskd/slskd/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3) }')
-wget -q "https://github.com/slskd/slskd/releases/download/${RELEASE}/slskd-${RELEASE}-linux-x64.zip" -O $tmp_file
-unzip -q $tmp_file
-mv ${APPLICATION}-${RELEASE} /opt/${APPLICATION}
+cd /opt
+wget -q "https://github.com/slskd/slskd/releases/download/${RELEASE}/slskd-${RELEASE}-linux-x64.zip"
+unzip -q ${APPLICATION}-${RELEASE}-linux-x64.zip -d ./${APPLICATION}
 echo "${RELEASE}" >/opt/${APPLICATION}_version.txt
 JWT_KEY=$(openssl rand -base64 44)
 sed -i \
