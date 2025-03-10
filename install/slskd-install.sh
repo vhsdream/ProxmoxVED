@@ -30,7 +30,7 @@ echo "${RELEASE}" >/opt/${APPLICATION}_version.txt
 JWT_KEY=$(openssl rand -base64 44)
 sed -i \
     -e "\|web:|,\|ttl|s|^#||" \
-    -e "\|https:|,\|5031|s|false|true" \
+    -e "\|https:|,\|5031|s|false|true|" \
     -e "\|soulseek|,\|write_queue|s|^#||" \
     -e "\|jwt:|,\|ttl|s|key: ~|key: $JWT_KEY|" \
     /opt/${APPLICATION}/config/slskd.example.yml
