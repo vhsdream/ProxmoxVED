@@ -45,7 +45,7 @@ After=network.target
 Wants=network.target
 
 [Service]
-WorkingDirectory=/opt${APPLICATION}
+WorkingDirectory=/opt/${APPLICATION}
 ExecStart=/opt/${APPLICATION}/slskd --config /opt/${APPLICATION}/config/slskd.yml
 Restart=always
 
@@ -60,7 +60,7 @@ customize
 
 # Cleanup
 msg_info "Cleaning up"
-rm -rf $tmp_file
+rm -rf ${APPLICATION}-${RELEASE}-linux-x64.zip
 $STD apt-get -y autoremove
 $STD apt-get -y autoclean
 msg_ok "Cleaned"
