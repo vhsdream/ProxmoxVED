@@ -38,7 +38,7 @@ function update_script() {
         msg_info "Updating $APP to v${RELEASE}"
         tmp_file=$(mktemp)
         wget -q "https://github.com/slskd/slskd/releases/download/${RELEASE}/slskd-${RELEASE}-linux-x64.zip" -O $tmp_file
-        unzip -q -j $tmp_file slskd -d /opt/${APP}
+        unzip -q -oj $tmp_file slskd -d /opt/${APP}
         msg_ok "Updated $APP to v${RELEASE}"
 
         msg_info "Starting $APP"
