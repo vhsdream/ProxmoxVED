@@ -30,6 +30,7 @@ replacer() {
         -e "s|\"/$INGEST\"| \"/opt/$INGEST\"|" dirs.json
 
     FILES=$(find ./scripts "$APP" -type f -name "*.py")
+    PATHS="$OLD_META_TEMP,$OLD_META_LOGS,$OLD_DB,$OLD_BASE,$OLD_CONFIG"
 
     for file in $FILES; do
         if grep -q "$OLD_META_TEMP" "$file"; then
