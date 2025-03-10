@@ -32,7 +32,7 @@ sed -i \
     -e "\|web:|,\|ttl|s|^#||" \
     -e "\|https:|,\|5031|s|false|true" \
     -e "\|soulseek|,\|write_queue|s|^#||" \
-    -e "\|jwt:|,\|ttl|key: ~|key: $JWT_KEY|" \
+    -e "\|jwt:|,\|ttl|s|key: ~|key: $JWT_KEY|" \
     /opt/${APPLICATION}/config/slskd.example.yml
 msg_ok "Setup ${APPLICATION}"
 
