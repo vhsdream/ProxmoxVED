@@ -205,7 +205,7 @@ customize
 
 # Cleanup
 msg_info "Cleaning up"
-rm -rf /opt/cwa.patch
+rm -rf $tmp_file
 $STD apt-get -y autoremove
 $STD apt-get -y autoclean
 msg_ok "Cleaned"
