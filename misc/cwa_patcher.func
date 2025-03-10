@@ -25,29 +25,25 @@ cwa_vars() {
 # This is the replacer. It uses sed to translate paths from the Docker install into ones more appropriate for a Proxmox Helper Script
 replacer() {
     cd $BASE
+    # Deal with a couple initial modifications
     sed -i "s|\"/calibre-library\"| \"/opt/calibre-web\"|" dirs.json ./scripts/auto_library.py
     sed -i -e "s|\"$OLD_CONFIG/$CONVERSION\"| \"$CONFIG/$CONVERSION\"|" \
         -e "s|\"/$INGEST\"| \"/opt/$INGEST\"|" dirs.json
 
+    # Gather list of Python scripts to be iterated
     FILES=$(find ./scripts "$APP" -type f -name "*.py")
-    PATHS="$OLD_META_TEMP,$OLD_META_LOGS,$OLD_DB,$OLD_BASE,$OLD_CONFIG"
+    # Create two arrays containing the paths to be modified
+    OLD_PATHS=("$OLD_META_TEMP $OLD_META_LOGS $OLD_DB $OLD_BASE $OLD_CONFIG")
+    NEW_PATHS=("$META_TEMP" "$META_LOGS" "$DB" "$BASE" "$CONFIG")
 
+    # Loop over each file; if the old paths are there, then replace using sed
     for file in $FILES; do
-        if grep -q "$OLD_META_TEMP" "$file"; then
-            sed -i "s|$OLD_META_TEMP|$META_TEMP|g" "$file"
-        fi
-        if grep -q "$OLD_META_LOGS" "$file"; then
-            sed -i "s|$OLD_META_LOGS|$META_LOGS|g" "$file"
-        fi
-        if grep -q "$OLD_DB" "$file"; then
-            sed -i "s|$OLD_DB|$DB|g" "$file"
-        fi
-        if grep -q "$OLD_BASE" "$file"; then
-            sed -i "s|$OLD_BASE|$BASE|g" "$file"
-        fi
-        if grep -q "$OLD_CONFIG" "$file"; then
-            sed -i "s|$OLD_CONFIG|"$CONFIG"|g" "$file"
-        fi
+        for ((path=0;path<${OLD_PATHS[@]};path++))
+        do
+            if grep -q "${OLD_PATHS[path]}" "$file"; then
+                sed -i "s|${OLD_PATHS[path]}|${NEW_PATH}|g" "$file"
+            fi
+        done
     done
 
     # Deal with edge case(s)
