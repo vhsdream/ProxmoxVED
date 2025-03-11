@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-source <(curl -s https://raw.githubusercontent.com/community-scripts/ProxmoxVED/main/misc/build.func)
+source <(curl -s https://raw.githubusercontent.com/community-scripts/ProxmoxVED/cwa-func/misc/build.func)
+source <(curl -s https://raw.githubusercontent.com/community-scripts/ProxmoxVED/cwa-func/misc/cwa_patcher.func)
 # Copyright (c) 2021-2025 community-scripts ORG
 # Author: vhsdream
 # License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
@@ -30,7 +31,7 @@ function update_script() {
     fi
 
     RELEASE=$(curl -s https://api.github.com/repos/crocodilestick/Calibre-Web-Automated/releases/latest | grep "tag_name" | awk '{print substr($2, 3, length($2)-4) }')
-    if [[ "${RELEASE}" != "$(cat /opt/${APP}_version.txt)" ]] || [[ ! -f /opt/${APP}_version.txt ]]; then
+    if [[ "V${RELEASE}" != "$(cat /opt/${APP}_version.txt)" ]] || [[ ! -f /opt/${APP}_version.txt ]]; then
         msg_info "Stopping $APP"
         systemctl stop cps cwa-autolibrary cwa-ingester cwa-change-detector cwa-autozip.timer
         msg_ok "Stopped $APP"
@@ -44,14 +45,23 @@ function update_script() {
         rm -rf kepubify-linux-64bit
         curl -fsSLO https://github.com/pgaskin/kepubify/releases/latest/download/kepubify-linux-64bit
         chmod +x kepubify-linux-64bit
+        ./kepubify-linux-64bit --version | awk '{print substr($2, 2)}' > /opt/kepubify/version.txt
         cd /opt/calibre-web
         $STD pip install --upgrade calibreweb[goodreads,metadata,kobo]
+        pip show calibreweb | grep Version | cut -d' ' -f2 > /opt/calibre-web/calibreweb_version.txt
+        tmp_file=$(mktemp)
+        rm -rf /opt/cwa
+        wget -q "https://github.com/crocodilestick/Calibre-Web-Automated/archive/refs/tags/V${RELEASE}.zip" -O $tmp_file
+        unzip -q $tmp_file
+        mv ${APPLICATION}-${RELEASE}/ /opt/cwa
         cd /opt/cwa
-        $STD git stash --all
-        $STD git pull
         $STD pip install -r requirements.txt
-        wget -q https://gist.githubusercontent.com/vhsdream/2e81afeff139c5746db1ede88c01cc7b/raw/51238206e87aec6c0abeccce85dec9f2b0c89000/proxmox-lxc.patch -O /opt/cwa.patch # not for production
-        $STD git apply --whitespace=fix /opt/cwa.patch # not for production
+
+        # Patcher functions
+        cwa_vars
+        replacer
+        script_generator
+
         cp -r /opt/cwa/root/app/calibre-web/cps/* /usr/local/lib/python3*/dist-packages/calibreweb/cps
         cd scripts
         chmod +x check-cwa-services.sh ingest-service.sh change-detector.sh

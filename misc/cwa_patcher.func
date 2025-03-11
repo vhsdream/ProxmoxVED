@@ -1,0 +1,144 @@
+# Copyright (c) 2025 vhsdream
+# Author: vhsdream
+# License: MIT | https://github.com/community-scripts/ProxmoxVED/raw/main/LICENSE
+
+# Helper functions for transforming Calibre-Web Automated Docker into CWA-LXC
+
+# This function sets the variables used by the replacer/script-gen functions
+cwa_vars() {
+    OLD_BASE="/app/calibre-web-automated"
+    BASE="/opt/cwa"
+    SCRIPTS="$BASE/scripts"
+    APP="$BASE/root/app/calibre-web/cps"
+    OLD_CONFIG="/config"
+    CONFIG="/var/lib/cwa"
+    OLD_DB="$OLD_CONFIG/app.db"
+    DB="/root/.calibre-web/app.db"
+    OLD_META_TEMP="$OLD_BASE/metadata_temp"
+    META_TEMP="$CONFIG/metadata_temp"
+    OLD_META_LOGS="$OLD_BASE/metadata_change_logs"
+    META_LOGS="$CONFIG/metadata_change_logs"
+    INGEST="cwa-book-ingest"
+    CONVERSION=".cwa_conversion_tmp"
+}
+
+# This is the replacer. It uses sed to translate paths from the Docker install into ones more appropriate for a Proxmox Helper Script
+replacer() {
+    cd $BASE
+    # Deal with a couple initial modifications
+    sed -i "s|\"/calibre-library\"| \"/opt/calibre-web\"|" dirs.json ./scripts/auto_library.py
+    sed -i -e "s|\"$OLD_CONFIG/$CONVERSION\"| \"$CONFIG/$CONVERSION\"|" \
+        -e "s|\"/$INGEST\"| \"/opt/$INGEST\"|" dirs.json
+
+    # Gather list of Python scripts to be iterated
+    FILES=$(find ./scripts "$APP" -type f -name "*.py")
+    # Create two arrays containing the paths to be modified
+    OLD_PATHS=("$OLD_META_TEMP $OLD_META_LOGS $OLD_DB $OLD_BASE $OLD_CONFIG")
+    NEW_PATHS=("$META_TEMP" "$META_LOGS" "$DB" "$BASE" "$CONFIG")
+
+    # Loop over each file; if the old paths are there, then replace using sed
+    for file in $FILES; do
+        for ((path=0;path<${OLD_PATHS[@]};path++))
+        do
+            if grep -q "${OLD_PATHS[path]}" "$file"; then
+                sed -i "s|${OLD_PATHS[path]}|${NEW_PATH}|g" "$file"
+            fi
+        done
+    done
+
+    # Deal with edge case(s)
+    sed -i -e "s|\"/admin$CONFIG\"|\"/admin$OLD_CONFIG\"|" \
+        -e "s|app/LSCW_RELEASE|opt/calibre-web/calibreweb_version.txt|g" \
+        -e "s|app/CWA_RELEASE|opt/Calibre-Web-Automated_version.txt|g" \
+        -e "s/lscw_version/calibreweb_version/g" \
+        -e "s|app/KEPUBIFY_RELEASE|opt/kepubify/version.txt|g" \
+        -e "s|app/cwa_update_notice|opt/.cwa_update_notice|g" \
+        $APP/admin.py $APP/render_template.py
+    sed -i "s|\"$CONFIG/post_request\"|\"$OLD_CONFIG/post_request\"|" $APP/cwa_functions.py
+    sed -i -e "/^# Define user/,/^os.chown/d" -e "/nbp.set_l\|self.set_l/d" -e "/def set_libr/,/^$/d" \
+        ./scripts/convert_library.py ./scripts/kindle_epub_fixer.py ./scripts/ingest_processor.py
+    sed -i -n '/Linuxserver.io/{x;d;};1h;1!{x;p;};${x;p;}' $APP/templates/admin.html && \
+        sed -i -e "/Linuxserver.io/,+3d" \
+        -e "s/commit/calibreweb_version/" $APP/templates/admin.html
+}
+
+# This is the script generator. Handles creating a few CWA scripts without cluttering up the install and ct scripts
+script_generator() {
+    bash -c "cat > /opt/cwa/scripts/change-detector.sh" <<-EOF
+#!/usr/bin/env bash
+
+echo "========== STARTING METADATA CHANGE DETECTOR ==========="
+
+# Folder to monitor
+WATCH_FOLDER="/var/lib/cwa/metadata_change_logs"
+echo "[metadata-change-detector] Watching folder: \$WATCH_FOLDER"
+
+# Monitor the folder for new files
+inotifywait -m -e close_write -e moved_to --exclude '^.*\.(swp)$' "\$WATCH_FOLDER" |
+while read -r directory events filename; do
+        echo "[metadata-change-detector] New file detected: \$filename"
+        python3 /opt/cwa/scripts/cover_enforcer.py "--log" "\$filename"
+done
+EOF
+
+    bash -c "cat > $SCRIPTS/ingest-service.sh" <<-EOF
+#!/usr/bin/env bash
+
+echo "========== STARTING CWA-INGEST SERVICE =========="
+
+WATCH_FOLDER=$(grep -o '"ingest_folder": "[^"]*' /opt/cwa/dirs.json | grep -o '[^"]*$')
+echo "[cwa-ingest-service] Watching folder: \$WATCH_FOLDER"
+
+inotifywait -m -r --format="%e %w%f" -e close_write -e moved_to "\$WATCH_FOLDER" |
+while read -r events filepath ; do
+        echo "[cwa-ingest-service] New files detected - \$filepath - Starting Ingest Processor..."
+        python3 /opt/cwa/scripts/ingest_processor.py "\$filepath"
+done
+EOF
+
+    bash -c "cat > $SCRIPTS/check-cwa-services.sh" <<-EOF
+#!/usr/bin/env bash
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+echo "====== Calibre-Web Automated -- Status of Monitoring Services ======"
+echo ""
+
+INGESTER_STATUS=\$(systemctl is-active cwa-ingester)
+METACHANGE_STATUS=\$(systemctl is-active cwa-change-detector)
+
+if [ "\$INGESTER_STATUS" = "active" ] ; then
+    echo -e "- cwa-ingest-service \${GREEN}is running\${NC}"
+    is=true
+else
+    echo -e "- cwa-ingest-service \${RED}is not running\${NC}"
+    is=false
+fi
+
+if [ "\$METACHANGE_STATUS" = "active" ]; then
+    echo -e "- metadata-change-detector \${GREEN}is running\${NC}"
+    mc=true
+else
+    echo -e "- metadata-change-detector \${RED}is not running\${NC}"
+    mc=false
+fi
+
+echo ""
+
+if \$is && \$mc; then
+    echo -e "Calibre-Web-Automated was \${GREEN}successfully installed \${NC}and \${GREEN}is running properly!\${NC}"
+    exit 0
+else
+    echo -e "Calibre-Web-Automated was \${RED}not installed successfully\${NC}, please check the logs for more information."
+    if [ "\$is" = true ] && [ "\$mc" = false ] ; then
+        exit 1
+    elif [ "\$is" = false ] && [ "\$mc" = true ] ; then
+        exit 2
+    else
+        exit 3
+    fi
+fi
+EOF
+}
