@@ -41,7 +41,7 @@ replacer() {
         for ((path=0;path<${#OLD_PATHS[@]};path++))
         do
             if grep -q "${OLD_PATHS[path]}" "$file"; then
-                sed -i "s|${OLD_PATHS[path]}|${NEW_PATH}|g" "$file"
+                sed -i "s|${OLD_PATHS[path]}|${NEW_PATHS[path]}|g" "$file"
             fi
         done
     done
