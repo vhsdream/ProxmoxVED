@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-source <(curl -s https://raw.githubusercontent.com/community-scripts/ProxmoxVED/main/misc/build.func)
+source <(curl -s https://raw.githubusercontent.com/vhsdream/ProxmoxVE-dev/slskd-soularr/misc/build.func)
 # Copyright (c) 2021-2025 community-scripts ORG
 # Author: vhsdream
 # License: MIT | https://github.com/community-scripts/ProxmoxVED/raw/main/LICENSE
 # Source: https://github.com/slskd/slskd, https://soularr.net
 
 APP="slskd"
-var_tags=""
+var_tags="arr,p2p"
 var_cpu="1"
 var_ram="512"
 var_disk="4"
@@ -38,7 +38,7 @@ function update_script() {
         msg_info "Updating $APP to v${RELEASE}"
         tmp_file=$(mktemp)
         wget -q "https://github.com/slskd/slskd/releases/download/${RELEASE}/slskd-${RELEASE}-linux-x64.zip" -O $tmp_file
-        unzip -q -j ${APP}-${RELEASE}.zip slskd /opt/${APP}
+        unzip -q -oj $tmp_file slskd -d /opt/${APP}
         msg_ok "Updated $APP to v${RELEASE}"
 
         msg_info "Cleaning Up"
@@ -48,11 +48,17 @@ function update_script() {
         echo "${RELEASE}" >/opt/${APP}_version.txt
         msg_ok "$APP updated"
         msg_info "Updating Soularr"
+        cp /opt/soularr/config.ini /opt/soularrconfig.ini
+        cp /opt/soularr/run.sh /opt/soularrscript.sh
+        cd /tmp
+        rm -rf /opt/soularr
+        wget -q https://github.com/mrusse/soularr/archive/refs/heads/main.zip
+        unzip -q main.zip
+        mv soularr-main /opt/soularr
         cd /opt/soularr
-        cp config.ini /opt/soularrconfig.ini
-        $STD git pull
-        $STD python install -r requirements.txt
+        $STD pip install -r requirements.txt
         mv /opt/soularrconfig.ini /opt/soularr/config.ini
+        mv /opt/soularrscript.sh /opt/soularr/run.sh
         msg_ok "Soularr updated"
         msg_info "Starting $APP and Soularr"
         systemctl start slskd soularr.timer
@@ -72,3 +78,5 @@ msg_ok "Completed Successfully!\n"
 echo -e "${CREATING}${GN}${APP} setup has been successfully initialized!${CL}"
 echo -e "${INFO}${YW} Access it using the following URL:${CL}"
 echo -e "${TAB}${GATEWAY}${BGN}http://${IP}:5030${CL}"
+echo -e "${RAMSIZE}${BL} ${BOLD}Finish configuring Soularr at /opt/soularr/config.ini${CL}"
+echo -e "${ADVANCED}${DGN} Then start with${CL} ${BOLD}${UL}systemctl start soularr.timer${CL}"
