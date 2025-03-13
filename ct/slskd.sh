@@ -3,7 +3,7 @@ source <(curl -s https://raw.githubusercontent.com/community-scripts/ProxmoxVED/
 # Copyright (c) 2021-2025 community-scripts ORG
 # Author: vhsdream
 # License: MIT | https://github.com/community-scripts/ProxmoxVED/raw/main/LICENSE
-# Source: https://github.com/slskd/slskd
+# Source: https://github.com/slskd/slskd, https://soularr.net
 
 APP="slskd"
 var_tags=""
@@ -24,16 +24,16 @@ function update_script() {
     check_container_storage
     check_container_resources
 
-    if [[ ! -d /opt/slskd ]]; then
+    if [[ ! -d /opt/slskd ]] || [[ ! -d /opt/soularr ]]; then
         msg_error "No ${APP} Installation Found!"
         exit
     fi
 
     RELEASE=$(curl -s https://api.github.com/repos/slskd/slskd/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3) }')
     if [[ "${RELEASE}" != "$(cat /opt/${APP}_version.txt)" ]] || [[ ! -f /opt/${APP}_version.txt ]]; then
-        msg_info "Stopping $APP"
-        systemctl stop slskd
-        msg_ok "Stopped $APP"
+        msg_info "Stopping $APP and Soularr"
+        systemctl stop slskd soularr.timer soularr.service
+        msg_ok "Stopped $APP and Soularr"
 
         msg_info "Updating $APP to v${RELEASE}"
         tmp_file=$(mktemp)
@@ -41,16 +41,23 @@ function update_script() {
         unzip -q -j ${APP}-${RELEASE}.zip slskd /opt/${APP}
         msg_ok "Updated $APP to v${RELEASE}"
 
-        msg_info "Starting $APP"
-        systemctl start slskd
-        msg_ok "Started $APP"
-
         msg_info "Cleaning Up"
         rm -rf $tmp_file
         msg_ok "Cleanup Completed"
 
         echo "${RELEASE}" >/opt/${APP}_version.txt
-        msg_ok "Update Successful"
+        msg_ok "$APP updated"
+        msg_info "Updating Soularr"
+        cd /opt/soularr
+        cp config.ini /opt/soularrconfig.ini
+        $STD git pull
+        $STD python install -r requirements.txt
+        mv /opt/soularrconfig.ini /opt/soularr/config.ini
+        msg_ok "Soularr updated"
+        msg_info "Starting $APP and Soularr"
+        systemctl start slskd soularr.timer
+        msg_ok "Started $APP and Soularr"
+
     else
         msg_ok "No update required. ${APP} is already at v${RELEASE}"
     fi
