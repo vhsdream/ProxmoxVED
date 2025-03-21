@@ -121,7 +121,7 @@ msg_ok "Installed ffmpeg7"
 
 msg_info "Installing NodeJS"
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" >/etc/apt/sources.list.d/nodesource.list
+echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" >/etc/apt/sources.list.d/nodesource.list
 $STD apt-get update
 $STD apt-get install -y nodejs
 msg_ok "Installed NodeJS"
@@ -148,6 +148,141 @@ msg_ok "Set up Postgresql Database"
 # TODO: All of the pre-install stuff from pre
 # Involves cloning the Immich Base Image repo and building various libraries
 # Also, have completely ignored any CUDA installation stuff, and a way to have user choose between installing for OpenVINO and CUDA.
+
+msg_info "Compiling Custom Photo-processing Library"
+STAGING_DIR=/opt/staging
+BASE_REPO="https://github.com/immich-app/base-images"
+BASE_DIR=${STAGING_DIR}/base-images
+SOURCE_DIR=${STAGING_DIR}/image-source
+LD_LIBRARY_PATH=/usr/local/lib
+$STD git clone -b main ${BASE_REPO} ${STAGING_DIR}
+mkdir -p ${SOURCE_DIR}
+
+# Build libjxl
+# BTW this is the one that might be broken and not even used anymore
+cd ${STAGING_DIR}
+SOURCE=${SOURCE_DIR}/libjxl
+set -e
+JPEGLI_LIBJPEG_LIBRARY_SOVERSION="62"
+JPEGLI_LIBJPEG_LIBRARY_VERSION="62.3.0"
+: "${LIBJXL_REVISION:=$(jq -cr '.sources[] | select(.name == "libjxl").revision' $BASE_DIR/server/bin/build-lock.json)}"
+set +e
+$STD git clone -b ${LIBJXL_REVISION} https://github.com/libjxl/libjxl.git ${SOURCE}
+cd ${SOURCE}
+$STD git submodule update --init --recursive --depth 1 --recommend-shallow
+$STD git apply ${BASE_DIR}/server/bin/jpegli-empy-dht-marker.patch
+$STD git apply ${BASE_DIR}/server/bin/jpegli-icc-warning.patch
+mkdir build
+cd build
+$STD cmake \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DBUILD_TESTING=OFF \
+	-DJPEGXL_ENABLE_DOXYGEN=OFF \
+	-DJPEGXL_ENABLE_MANPAGES=OFF \
+	-DJPEGXL_ENABLE_PLUGIN_GIMP210=OFF \
+	-DJPEGXL_ENABLE_BENCHMARK=OFF \
+	-DJPEGXL_ENABLE_EXAMPLES=OFF \
+	-DJPEGXL_FORCE_SYSTEM_BROTLI=ON \
+	-DJPEGXL_FORCE_SYSTEM_HWY=ON \
+	-DJPEGXL_ENABLE_JPEGLI=ON \
+	-DJPEGXL_ENABLE_JPEGLI_LIBJPEG=ON \
+	-DJPEGXL_INSTALL_JPEGLI_LIBJPEG=ON \
+	-DJPEGXL_ENABLE_PLUGINS=ON \
+	-DJPEGLI_LIBJPEG_LIBRARY_SOVERSION="${JPEGLI_LIBJPEG_LIBRARY_SOVERSION}" \
+	-DJPEGLI_LIBJPEG_LIBRARY_VERSION="${JPEGLI_LIBJPEG_LIBRARY_VERSION}" \
+	-DLIBJPEG_TURBO_VERSION_NUMBER=2001005
+$STD cmake --build . -- -j"${nproc}"
+$STD cmake --install .
+$STD ldconfig /usr/local/lib
+$STD make clean
+cd ${STAGING_DIR}
+rm -rf ${SOURCE}/{build,third_party}
+
+# Build libheif
+SOURCE=${SOURCE_DIR}/libheif
+set -e
+: "${LIBHEIF_REVISION:=$(jq -cr '.sources[] | select(.name == "libheif").revision' $BASE_DIR/server/bin/build-lock.json)}"
+set +e
+$STD git clone -b ${LIBHEIF_REVISION} https://github.com/strukturag/libheif.git ${SOURCE}
+cd ${SOURCE}
+mkdir build
+cd build
+$STD cmake --preset=release-noplugins \
+	-DWITH_DAV1D=ON \
+	-DENABLE_PARALLEL_TILE_DECODING=ON \
+	-DWITH_LIBSHARPYUV=ON \
+	-DWITH_LIBDE265=ON \
+	-DWITH_AOM_DECODER=OFF \
+	-DWITH_AOM_ENCODER=OFF \
+	-DWITH_X265=OFF \
+	-DWITH_EXAMPLES=OFF \
+	..
+$STD make install
+$STD ldconfig /usr/local/lib
+$STD make clean
+cd ${STAGING_DIR}
+rm -rf ${SOURCE}/build
+
+# Build libraw
+cd ${SCRIPT_DIR}
+SOURCE=${SOURCE_DIR}/libraw
+set -e
+: "${LIBRAW_REVISION:=$(jq -cr '.sources[] | select(.name == "libraw").revision' $BASE_IMG_REPO_DIR/server/bin/build-lock.json)}"
+set +e
+$STD git clone -b ${LIBRAW_REVISION} https://guthub.com/libraw/libraw.git ${SOURCE}
+mkdir -p ${SOURCE}/build
+cd ${SOURCE}/build
+$STD autoreconf --install
+$STD ./configure
+$STD make -j"$(nproc)"
+$STD make install
+$STD ldconfig /usr/local/lib
+$STD make clean
+cd ${STAGING_DIR}
+rm -rf ${SOURCE}/build
+
+# build Imagemagick (really? Need to check if we really have to do this)
+SOURCE=$SOURCE_DIR/image-magick
+
+set -e
+: "${IMAGEMAGICK_REVISION:=$(jq -cr '.sources[] | select(.name == "imagemagick").revision' $BASE_IMG_REPO_DIR/server/bin/build-lock.json)}"
+set +e
+
+git_clone https://github.com/ImageMagick/ImageMagick.git $SOURCE $IMAGEMAGICK_REVISION
+cd $SOURCE
+$STD ./configure --with-modules
+$STD make -j"$(nproc)"
+$STD make install
+$STD ldconfig /usr/local/lib
+$STD make clean
+cd ${STAGING_DIR}
+rm -rf ${SOURCE}/build
+
+# build libvips
+SOURCE=$SOURCE_DIR/libvips
+set -e
+: "${LIBVIPS_REVISION:=$(jq -cr '.sources[] | select(.name == "libvips").revision' $BASE_IMG_REPO_DIR/server/bin/build-lock.json)}"
+set +e
+$STD git clone -b ${LIBVIPS_REVISION} https://github.com/libvips/libvips.git ${SOURCE}
+$STD meson setup build --buildtype=release --libdir=lib -Dintrospection=disabled -Dtiff=disabled -Djpeg-xl=disabled
+cd build
+$STD ninja install
+$STD ldconfig /usr/local/lib
+
+# Remove unused pkgs
+$STD dpkg -r --force-depends libjpeg2-turbo
+
+
+
+
+
+
+
+
+
+
+
+
 
 msg_info "Setup ${APPLICATION}"
 RELEASE=$(curl -s https://api.github.com/repos/[REPO]/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3) }')
