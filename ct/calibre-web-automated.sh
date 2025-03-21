@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-source <(curl -s https://raw.githubusercontent.com/community-scripts/ProxmoxVED/cwa-func/misc/build.func)
-source <(curl -s https://raw.githubusercontent.com/community-scripts/ProxmoxVED/cwa-func/misc/cwa_patcher.func)
+source <(curl -s https://raw.githubusercontent.com/vhsdream/ProxmoxVE-dev/cwa/misc/build.func)
+source <(curl -s https://raw.githubusercontent.com/vhsdream/ProxmoxVE-dev/cwa/misc/cwa_patcher.func)
 # Copyright (c) 2021-2025 community-scripts ORG
 # Author: vhsdream
 # License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE

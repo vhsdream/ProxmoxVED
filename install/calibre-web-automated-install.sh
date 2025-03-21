@@ -93,7 +93,7 @@ msg_ok "Directories & files created"
 
 # patcher functions
 msg_info "Patching Calibre-Web Automated"
-source <(curl -s https://raw.githubusercontent.com/vhsdream/ProxmoxVE-dev/cwa-dev/misc/cwa_patcher.func)
+source <(curl -s https://raw.githubusercontent.com/vhsdream/ProxmoxVE-dev/cwa/misc/cwa_patcher.func)
 cwa_vars
 replacer
 script_generator
